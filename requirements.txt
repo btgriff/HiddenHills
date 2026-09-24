@@ -12,3 +12,4 @@ vega_datasets
 pycountry
 scikit-learn
 altair
+openpyxl
