@@ -1,0 +1,14 @@
+mplsoccer
+seaborn
+pandas==2.3.3
+matplotlib
+numpy
+scipy
+statistics
+streamlit
+plotly
+highlight-text
+vega_datasets
+pycountry
+scikit-learn
+altair
