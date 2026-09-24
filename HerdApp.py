@@ -69,7 +69,7 @@ metrics = {
 }
 
 
-def clean_herd_dataset(dirty_data):
+def clean_herd_dataset():
     renames = {
         'CED':'Calving Ease Direct',
         'BW':'Birth Weight',
@@ -96,7 +96,8 @@ def clean_herd_dataset(dirty_data):
     }
 
     ### Cows
-    cows = pd.read_excel(dirty_data, sheet_name="Cows")
+    # cows = pd.read_excel(dirty_data, sheet_name="Cows")
+    cows = pd.read_excel("https://github.com/btgriff/HiddenHills/raw/refs/heads/main/Herd.xlsx", sheet_name='Cows')
     cow_cols = cows.iloc[1].values[1:]
     cows = cows.iloc[2:,1:]
     cows.columns = cow_cols
@@ -118,7 +119,8 @@ def clean_herd_dataset(dirty_data):
     
     ### Bulls
     
-    bulls = pd.read_excel(dirty_data, sheet_name="Bulls")
+    # bulls = pd.read_excel(dirty_data, sheet_name="Bulls")
+    bulls = pd.read_excel("https://github.com/btgriff/HiddenHills/raw/refs/heads/main/Herd.xlsx", sheet_name='Bulls')
     bull_cols = bulls.iloc[2].values[1:]
     bulls = bulls.iloc[4:,1:]
     bulls.columns = bull_cols
@@ -412,19 +414,6 @@ def scout_report(herd, field_tag):
                 color="#4A2E19", fontweight="regular", fontname="DejaVu Sans",
                 ) 
 
-    # try:
-    #     clubpath = logo_dict[raw_valsdf['Team within selected timeframe'].values[0]]
-    #     if 'logo_cache' not in st.session_state:
-    #         st.session_state.logo_cache = {}
-    #     if clubpath not in st.session_state.logo_cache:
-    #         st.session_state.logo_cache[clubpath] = Image.open(urllib.request.urlopen(clubpath)).copy()
-    #     image = st.session_state.logo_cache[clubpath]
-    #     newax = fig.add_axes([.44,.43,0.15,0.15], anchor='C', zorder=1)
-    #     newax.imshow(image)
-    #     newax.axis('off')
-    # except Exception:
-    #     pass
-
     ax.set_facecolor('#fbf9f4')
     fig = plt.gcf()
     fig.patch.set_facecolor('#fbf9f4')
@@ -460,19 +449,20 @@ def show_report(herd,field_tag):
 
 
 
-if 'herd' not in st.session_state:
-    st.markdown("## Upload a Herd XLSX")
-    st.divider()
-    uploaded = st.file_uploader("Upload .xlsx", type=["xlsx"], key="splash_upload")
+# if 'herd' not in st.session_state:
+#     st.markdown("## Upload a Herd XLSX")
+#     st.divider()
+#     uploaded = st.file_uploader("Upload .xlsx", type=["xlsx"], key="splash_upload")
 
-    if uploaded is None:
-        st.stop()                     # wait here until the user picks a file
+#     if uploaded is None:
+#         st.stop()                     # wait here until the user picks a file
 
-    dirty_data = pd.ExcelFile(uploaded)
-    st.session_state['herd'] = clean_herd_dataset(dirty_data)
-    st.rerun()                        # rerun without the splash screen
+#     dirty_data = pd.ExcelFile(uploaded)
+#     st.session_state['herd'] = clean_herd_dataset(dirty_data)
+#     st.rerun()                        # rerun without the splash screen
 
-herd = st.session_state['herd']
+# herd = st.session_state['herd']
+herd = clean_herd_dataset()
 all_herd_list, herd_scatters = st.tabs(['Full Herd','Scatter Plots'])
 
 with all_herd_list:
