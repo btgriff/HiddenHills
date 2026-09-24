@@ -463,10 +463,10 @@ def show_report(herd,field_tag):
 
 # herd = st.session_state['herd']
 herd = clean_herd_dataset()
-all_herd_list, herd_scatters = st.tabs(['Full Herd','Scatter Plots'])
+all_herd_list, herd_scatter_tab = st.tabs(['Full Herd','Scatter Plots'])
 
 with all_herd_list:
-    st.caption("Click the box next to a cow/bull to")
+    st.caption("Click the box next to a cow or bull to visualize its percentile rankings. Below the image is a button to download it.")
     
     _pl_selection = st.dataframe(
         herd,
@@ -484,4 +484,6 @@ with all_herd_list:
             herd, _pl_clicked_name
         )
 
-    
+
+with herd_scatter_tab:
+    st.write('Coming Soon!')
