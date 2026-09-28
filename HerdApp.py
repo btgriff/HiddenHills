@@ -28,6 +28,7 @@ import sqlite3
 import threading
 import io as _qio
 
+
 acros = {
     'Calving Ease Direct':'(CED)\n',
     'Birth Weight':'(BW)\n',
@@ -463,10 +464,10 @@ def show_report(herd,field_tag):
 
 # herd = st.session_state['herd']
 herd = clean_herd_dataset()
-all_herd_list, herd_scatter_tab = st.tabs(['Full Herd','Scatter Plots'])
+all_herd_list, herd_scatter_tab = st.tabs(['Full Herd','Comparison'])
 
 with all_herd_list:
-    st.caption("Click the box next to a cow or bull to visualize its percentile rankings. Below the image is a button to download it.")
+    st.subheader("Click the box next to a cow or bull to visualize its percentile rankings. Below the image is a button to download it.")
     
     _pl_selection = st.dataframe(
         herd,
@@ -486,4 +487,202 @@ with all_herd_list:
 
 
 with herd_scatter_tab:
-    st.write('Coming Soon!')
+    st.subheader("Select 2 cows to see their percentiles plotted together")
+    
+    _ZONE_COLORS = [
+        (0, 10, '#01349b', 'Elite (Top 10%)'),        # Elite
+        (10, 35, '#007f35', 'Above Average (11-35%)'), # Above Average
+        (35, 66, '#9b6700', 'Average (36-66%)'),        # Average
+        (66, 100, '#b60918', 'Below Average (Bottom 35%)'), # Below Average
+    ]
+
+    def _dot_color(pct):
+        """Return the zone colour for a single percentile value (0-100)."""
+        for lo, hi, col, _ in _ZONE_COLORS:
+            if lo <= pct <= hi:
+                return col
+        return '#b60918'
+
+    def _make_comparison_chart(
+        cow1, cow2,
+        color1='#4C94F6', color2='#EE5454',
+        bg_color='#fbf9f4',
+    ):
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+        import numpy as np
+        from matplotlib.lines import Line2D
+
+        column_mapping = {
+            "ProS":"ProS",
+            "HerdBuilder":"HerdB",
+            "GridMaster":"GridM",
+            
+            "Daughter's Milk":'MILK',
+            'Heifer Pregnancy':'HPG',
+            'Calving Ease Maternal':'CEM',
+            'Calving Ease Direct':'CED',
+            
+            'Birth Weight':'BW',
+            'Weaning Weight':'WW',
+            'Yearling Weight':'YW',
+            
+            'Average Daily Gain':'ADG',
+            'Dry Matter Intake':'DMI',
+            'Maintenance Energy':'ME',
+            'Stayability':'STAY',
+            
+            'Marbling':'MARB',
+            'Yield Grade':'YG',
+            'Carcass Weight':'CW',
+            'Rib Eye Area':'REA',
+            'Fat':'FAT'
+        }
+
+        labels = list(column_mapping.keys())
+        cols = [f"{l}_pct" for l in labels]
+        labels = [column_mapping[l] for l in labels]
+
+        reg1 = herd[herd['Field Tag']==cow1]['Reg #'].values[0]
+        reg2 = herd[herd['Field Tag']==cow2]['Reg #'].values[0]
+
+        pcts1 = herd[herd['Field Tag']==cow1][cols].values.tolist()[0]
+        pcts1 = [p*100 for p in pcts1]
+        pcts2 = herd[herd['Field Tag']==cow2][cols].values.tolist()[0]
+        pcts2 = [p*100 for p in pcts2]
+
+        n = len(labels)
+        # Extra bottom margin for the notes block (same position as scout_report)
+        fig_h = max(7, n * 0.52 + 3.5)
+        fig, ax = plt.subplots(figsize=(12, fig_h), facecolor=bg_color)
+        ax.set_facecolor(bg_color)
+        fig.patch.set_facecolor(bg_color)
+
+        y_pos = np.arange(n)
+
+        # ── Percentile zone background bands (full width, like scout_report) ──
+        zone_bg = {
+            (0, 10): '#dce8fb',   # Elite
+            (10, 35): '#dff2e9',   # Above Average
+            (35, 66): '#fff6e0',   # Average
+            (66, 100): '#fde8ea',   # Below Average
+        }
+        for (lo, hi), bg in zone_bg.items():
+            ax.axvspan(lo, hi, color=bg, alpha=0.35, zorder=0)
+
+        # Subtle alternating row bands on top of zone colours
+        for i in range(n):
+            if i % 2 == 0:
+                ax.barh(i, 100, left=0, height=0.85, color='#00000008', zorder=1)
+
+        # Zone divider lines
+        for x in [10, 66, 35]:
+            ax.axvline(x, color='#f1e9d8', linewidth=0.8, linestyle='--', zorder=2)
+
+        # Connecting lines — coloured by the leading player
+        for i, (p1, p2) in enumerate(zip(pcts1, pcts2)):
+            if p1 < p2:
+                line_col = color1
+            elif p2 < p1:
+                line_col = color2
+            else:
+                line_col = 'grey'
+            ax.plot([p1, p2], [i, i], color='#4a2e19', linewidth=2.2, zorder=3,
+                    solid_capstyle='round', alpha=0.55)
+
+        # Dots coloured by percentile zone (matching scout_report bar colours)
+        for i, (p1, p2) in enumerate(zip(pcts1, pcts2)):
+            ax.scatter(p1, i, color=color1, s=200, zorder=5,
+                       edgecolors='w', linewidths=.5)
+            ax.scatter(p2, i, color=color2, s=200, zorder=5,
+                       edgecolors='w', linewidths=.5)
+
+        # Per-90 value labels next to each dot
+        for i, (p1, p2) in enumerate(zip(pcts1, pcts2)):
+            offset = 2.5
+            ha1 = 'right' if p1 <= p2 else 'left'
+            ha2 = 'left'  if p1 <= p2 else 'right'
+            dx1 = 0 #-offset if ha1 == 'right' else offset
+            dx2 = 0 # offset if ha2 == 'left'  else -offset
+            ax.text(p1 + dx1, i+.275, f'{int(p1)}', va='center', ha='center', zorder=6,
+                    fontsize=12, color='#4a2e19', fontweight='bold')
+            ax.text(p2 + dx2, i+.275, f'{int(p2)}', va='center', ha='center', zorder=6,
+                    fontsize=12, color='#4a2e19', fontweight='bold')
+
+        # Zone labels along the top
+        for lo, hi, col, lbl_short in [
+            (66, 100, '#b60918', 'Below Average'),
+            (35, 66, '#9b6700', 'Average'),
+            (10, 35, '#007f35', 'Above Avg'),
+            (0, 10, '#01349b', 'Top 10%'),
+        ]:
+            ax.text((lo+hi)/2, -0.75, lbl_short, ha='center', va='top',
+                    fontsize=10, color=col, fontweight='bold')
+
+        # Y-axis metric labels — coloured by the leading player
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(labels, fontsize=14, color='#333333')
+        ax.tick_params(axis='y', length=0)
+        for tick, p1, p2 in zip(ax.get_yticklabels(), pcts1, pcts2):
+            if p1 < p2:
+                tick.set_color(color1)
+                tick.set_fontweight('bold')
+            elif p2 < p1:
+                tick.set_color(color2)
+                tick.set_fontweight('bold')
+            else:
+                tick.set_color('#888888')
+        ax.set_xlim(0, 100)
+        ax.set_ylim(-1.3, n - 0.2)
+        ax.set_xlabel(f'Percentile Rankings', fontsize=12, color='#fbf9f4', labelpad=8)
+        ax.xaxis.set_tick_params(labelsize=8, colors='#fbf9f4')
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.invert_yaxis()
+
+        # ── Title ─────────────────────────────────────────────────────────────
+        fig.text(0.5, 1.0, f'{cow1} (#{reg1})                    ', fontsize=13, fontweight='bold', color=color1, ha='right')
+        fig.text(0.5, 1.0, f'Percentile Comparison', fontsize=13, fontweight='bold', color='#4a2e19', ha='center')
+        fig.text(0.5, 1.0, f'                    {cow2} (#{reg2})', fontsize=13, fontweight='bold', color=color2, ha='left')
+
+
+        notes_lines = [
+            "Points & numbers are each cow's percentiles. Metrics are colored based on the better-scoring cow.",
+        ]
+        notes_text = '\n'.join(notes_lines)
+        fig.text(0.5, 0.08, notes_text, fontsize=10, color='#4A2E19',
+                 va='bottom', ha='center', linespacing=1.6)
+
+        plt.tight_layout(rect=[0, 0.06, 0.88, 0.995])
+        return fig
+
+
+    with st.form('Cow Selection'):
+        _cc1, _cc2 = st.columns(2)
+        with _cc1:
+            _cow_sel1 = st.selectbox('Cow 1', herd['Field Tag'].unique(), key='cmp_p1')
+        with _cc2:
+            _cow_sel2 = st.selectbox('Cow 2', herd['Field Tag'].unique(), key='cmp_p2')
+        _cmp_submitted = st.form_submit_button("Generate Image", width='stretch')
+
+    if _cmp_submitted and _cow_sel1 and _cow_sel2:
+        if _cow_sel1 == _cow_sel2:
+            st.warning("Please select two different cows")
+        else:
+                _cmp_fig = _make_comparison_chart(
+                    cow1=_cow_sel1, cow2=_cow_sel2,
+                )
+                st.pyplot(_cmp_fig)
+
+                # Download
+                import io as _cio
+                _cbuf = _cio.BytesIO()
+                _cmp_fig.savefig(_cbuf, format='png', dpi=150, bbox_inches='tight', facecolor='#fbf9f4')
+                _cbuf.seek(0)
+                st.download_button("Download Chart", _cbuf,
+                    file_name=f"compare_{_cow_sel1.replace(' ','_')}_vs_{_cow_sel2.replace(' ','_')}.png",
+                    mime="image/png", key="dl_compare")
+
+    elif _cmp_submitted:
+        st.info("Please select both cows before comparing.")
+
