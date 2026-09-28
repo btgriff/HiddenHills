@@ -71,6 +71,10 @@ metrics = {
 
 
 def clean_herd_dataset():
+    herd_table_col_order = [
+        'Field Tag','Reg #','Reg Type','Animal ID','Name','Sex','Birth Date','ProS','ProS_pct','HerdBuilder','HerdBuilder_pct','GridMaster','GridMaster_pct','Calving Ease Direct','Calving Ease Direct_pct','Birth Weight','Birth Weight_pct','Weaning Weight','Weaning Weight_pct','Yearling Weight','Yearling Weight_pct','Average Daily Gain','Average Daily Gain_pct','Dry Matter Intake','Dry Matter Intake_pct',"Daughter's Milk","Daughter's Milk_pct",'Maintenance Energy','Maintenance Energy_pct','Heifer Pregnancy','Heifer Pregnancy_pct','Calving Ease Maternal','Calving Ease Maternal_pct','Stayability','Stayability_pct','Marbling','Marbling_pct','Yield Grade','Yield Grade_pct','Carcass Weight','Carcass Weight_pct','Rib Eye Area','Rib Eye Area_pct','Fat','Fat_pct','$Profit','$Profit_pct','$Ranch','$Ranch_pct','Fertility','Fertility_pct','$Feeder','$Feeder_pct','BrdCds','CowBull',
+    ]
+
     renames = {
         'CED':'Calving Ease Direct',
         'BW':'Birth Weight',
@@ -147,7 +151,7 @@ def clean_herd_dataset():
     herd = pd.concat([cows_all,bulls_all],ignore_index=True)
     herd['Birth Date'] = pd.to_datetime(herd['Birth Date']).dt.strftime('%Y-%m-%d')
     herd['Field Tag'] = herd['Field Tag'].astype(str)
-    return herd
+    return herd[herd_table_col_order]
 ###########
 
 def add_labels(angles, values, labels, offset, ax, text_colors):
@@ -447,24 +451,10 @@ def show_report(herd,field_tag):
         file_name=f"{field_tag.replace(' ','_')}_percentiles.png",
         mime="image/png", key=f"qr_dl_")
 
+###############################################################################################################################
 
-
-
-# if 'herd' not in st.session_state:
-#     st.markdown("## Upload a Herd XLSX")
-#     st.divider()
-#     uploaded = st.file_uploader("Upload .xlsx", type=["xlsx"], key="splash_upload")
-
-#     if uploaded is None:
-#         st.stop()                     # wait here until the user picks a file
-
-#     dirty_data = pd.ExcelFile(uploaded)
-#     st.session_state['herd'] = clean_herd_dataset(dirty_data)
-#     st.rerun()                        # rerun without the splash screen
-
-# herd = st.session_state['herd']
 herd = clean_herd_dataset()
-all_herd_list, herd_scatter_tab = st.tabs(['Full Herd','Comparison'])
+all_herd_list, herd_compare_tab = st.tabs(['Full Herd','Comparison'])
 
 with all_herd_list:
     st.subheader("Click the box next to a cow or bull to visualize its percentile rankings. Below the image is a button to download it.")
@@ -486,7 +476,7 @@ with all_herd_list:
         )
 
 
-with herd_scatter_tab:
+with herd_compare_tab:
     st.subheader("Select 2 cows to see their percentiles plotted together")
     
     _ZONE_COLORS = [
