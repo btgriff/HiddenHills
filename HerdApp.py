@@ -816,6 +816,12 @@ with pairing_tab:
         all_pairs = get_all_pairings(dams, sires)
         all_pairs["Name"] = all_pairs["Name"].astype("string")
         all_pairs_pctile = all_pairs.iloc[:,:15]
-        st.dataframe(all_pairs.style.map(color_percentile, subset=all_pairs.columns[2:21]))
 
+        
+        float_cols = all_pairs.select_dtypes(include="float").columns
+        st.dataframe(
+            all_pairs.style
+                .map(color_percentile, subset=all_pairs.columns[2:21])
+                .format("{:.2f}", subset=float_cols)
+        )
         
