@@ -27,6 +27,8 @@ from sklearn.decomposition import PCA
 import sqlite3
 import threading
 import io as _qio
+from bs4 import BeautifulSoup
+import requests
 
 
 acros = {
@@ -69,6 +71,116 @@ metrics = {
     ]
 }
 
+####### Scraping Functions #######
+def _parse_row(row):
+    cols = None
+    cols = row.find_all('td')
+    cols = [ele.text.strip() for ele in cols]
+    return cols
+
+def get_global_percentages():
+    URL = "https://redangus.org/genetics/epd-percentiles/"
+    page = requests.get(URL)
+    soup = BeautifulSoup(page.content, "html.parser")
+    table = soup.find_all('table')[1]
+    data = []
+    headings=[]
+    headtext = soup.find_all("th")
+    for i in range(len(headtext)):
+        heading = headtext[i].get_text()
+        headings.append(heading)
+    
+    # headings=headings[0:4]
+    data.append(headings)
+    table_body = table
+    rows = table_body.find_all('tr')
+    for row_index in range(len(rows)):
+        row = rows[row_index]
+        cols = _parse_row(row)
+        data.append(cols)
+    data = pd.DataFrame(data)
+    data = data.rename(columns=data.iloc[0])
+    data = data.reindex(data.index.drop(0))
+    data = data.reindex(data.index.drop(1)).reset_index(drop=True)
+    data = data.iloc[:,:-6]
+    
+    global_percentages = data.iloc[:23,:20]
+    global_percentages[['pctl','HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY','CW']] = global_percentages[['pctl','HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY','CW']].astype(int)
+    global_percentages[['BW','MARB','YG','REA','BF','DMI','ADG']] = global_percentages[['BW','MARB','YG','REA','BF','DMI','ADG']].astype(float)
+    
+    return global_percentages
+
+def get_pctl(tbl, trait, value):
+    x = tbl[trait].to_numpy()
+    higher_better = x[0] > x[-1]
+    meets = value >= x if higher_better else value <= x
+    if not meets.any():
+        return np.nan
+    return tbl["pctl"].iloc[meets.argmax()]
+
+def get_pairing(dam, sire, global_percentages):
+    URL = f"https://vm-zebu.redangus.org/redspro/redspro/action/plannedMating.PlanMatingAction?eventSubmit_singlePlanMate=T&damNumber={dam}&sireNumber={sire}"
+    page = requests.get(URL)
+    soup = BeautifulSoup(page.content, "html.parser")
+    pair_name = soup.getText().split('\\n')[2].split(' : ')[0]
+    pair_id = soup.getText().split('\\n')[2].split(' : ')[1]
+    table = soup.find_all('table')[0]
+    data = []
+    headings=[]
+    headtext = soup.find_all("th")
+    for i in range(len(headtext)):
+        heading = headtext[i].get_text()
+        headings.append(heading)
+    
+    # headings=headings[0:4]
+    data.append(headings)
+    table_body = table
+    rows = table_body.find_all('tr')
+    for row_index in range(len(rows)):
+        row = rows[row_index]
+        cols = _parse_row(row)
+        data.append(cols)
+    data = pd.DataFrame(data)
+    data = data.rename(columns=data.iloc[0])
+    data = data.reindex(data.index.drop(0))
+    data = data.reindex(data.index.drop(1)).reset_index(drop=True)
+    data = data.iloc[:,:-6]
+    
+    epd = data.iloc[0:1,1:].replace('',np.nan)
+    epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM']] = epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM']].astype(int)
+    epd[['BW','DMI','ADG']] = epd[['BW','DMI','ADG']].astype(float)
+    
+    
+    pct_list = []
+    for trait, value in zip(epd.columns,epd.values[0]):
+        pct_list += [get_pctl(global_percentages, trait, value)]
+    
+    pct_cols_epd = [f'{c}_pct' for c in epd.columns.tolist()]
+    pct_df = pd.DataFrame(data=pct_list).T
+    pct_df.columns=pct_cols_epd
+    epd = pct_df.join(epd)
+
+    epd['Dam'] = dam
+    epd['Sire'] = sire
+    epd['Name'] = pair_name
+    epd['AnimalID'] = pair_id
+
+
+    epd = epd[['AnimalID'] + [col for col in epd.columns if col != 'AnimalID']]
+    epd = epd[['Name'] + [col for col in epd.columns if col != 'Name']]
+    
+    return epd
+
+def get_all_pairings(dams, sires):
+    all_pairs = pd.DataFrame()
+    for sire in sires:
+        for dam in dams:
+            pair = get_pairing(dam, sire, global_percentages)
+            all_pairs = pd.concat([all_pairs,pair],ignore_index=True)
+    return all_pairs
+
+global_percentages = get_global_percentages()
+############################
 
 def clean_herd_dataset():
     herd_table_col_order = [
@@ -454,7 +566,7 @@ def show_report(herd,field_tag):
 ###############################################################################################################################
 
 herd = clean_herd_dataset()
-all_herd_list, herd_compare_tab = st.tabs(['Full Herd','Comparison'])
+all_herd_list, herd_compare_tab, pairing_tab = st.tabs(['Full Herd','Comparison','Planned Matings'])
 
 with all_herd_list:
     st.subheader("Click the box next to a cow or bull to visualize its percentile rankings. Below the image is a button to download it.")
@@ -676,3 +788,8 @@ with herd_compare_tab:
     elif _cmp_submitted:
         st.info("Please select both cows before comparing.")
 
+with pairing_tab:
+    dams_text = st.text_input('Input a comma-separated list of Dams (RAAA#) (ex: 12345,12346,12347)')
+    sires_text = st.text_input('Input a comma-separated list of Sires (RAAA#) (ex: 12345,12346,12347)')
+
+    
