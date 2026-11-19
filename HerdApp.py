@@ -796,6 +796,9 @@ with pairing_tab:
     
     dams = [int(d) for d in dams_text.split(',')]
     sires = [int(d) for d in dams_text.split(',')]
+
+    st.write(dams)
+    st.write(sires)
     
     all_pairs = get_all_pairings(dams, sires)
     all_pairs
