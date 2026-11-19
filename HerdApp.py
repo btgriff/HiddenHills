@@ -71,6 +71,10 @@ metrics = {
     ]
 }
 
+def color_percentile(pc):
+    if pc>=15:
+        color = ('#007f35', '#d9f0e3')  # Above Avg
+
 ####### Scraping Functions #######
 def _parse_row(row):
     cols = None
@@ -802,5 +806,6 @@ with pairing_tab:
         sires = [int(d) for d in sires_text.split(',')]
     
         all_pairs = get_all_pairings(dams, sires)
-        all_pairs
+        all_pairs_pctile = all_pairs.iloc[:,:15]
+        st.dataframe(all_pairs_pctile.style.applymap(color_percentile, subset=all_pairs.columns[2:15]))
         
