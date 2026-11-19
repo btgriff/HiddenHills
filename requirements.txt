@@ -13,3 +13,5 @@ pycountry
 scikit-learn
 altair
 openpyxl
+bs4
+requests
