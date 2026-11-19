@@ -72,8 +72,13 @@ metrics = {
 }
 
 def color_percentile(pc):
-    if pc>=15:
-        color = ('#007f35', '#d9f0e3')  # Above Avg
+    if pd.isna(pc):
+        return ""
+    if pc <= 15:
+        fg, bg = "#007f35", "#d9f0e3"
+    else:
+        return ""
+    return f"color: {fg}; background-color: {bg}"
 
 ####### Scraping Functions #######
 def _parse_row(row):
@@ -807,5 +812,6 @@ with pairing_tab:
     
         all_pairs = get_all_pairings(dams, sires)
         all_pairs_pctile = all_pairs.iloc[:,:15]
-        st.dataframe(all_pairs_pctile.style.applymap(color_percentile, subset=all_pairs.columns[2:15]))
+        st.dataframe(all_pairs.style.map(color_percentile, subset=all_pairs.columns[2:15]))
+
         
