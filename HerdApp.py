@@ -789,17 +789,18 @@ with herd_compare_tab:
         st.info("Please select both cows before comparing.")
 
 with pairing_tab:
+    with st.form('Dams and Sires'):
     dams_text = st.text_input('Input a comma-separated list of Dams (RAAA#) (ex: 12345,12346,12347)')
     sires_text = st.text_input('Input a comma-separated list of Sires (RAAA#) (ex: 12345,12346,12347)')
-    dams_text.replace(' ','')
-    sires_text.replace(' ','')
-    
-    dams = [int(d) for d in dams_text.split(',')]
-    sires = [int(d) for d in sires_text.split(',')]
+    pair_submitted = st.form_submit_button("Generate Planned Matings", width='stretch')
 
-    st.write(dams)
-    st.write(sires)
+    if pair_submitted:
+        dams_text.replace(' ','')
+        sires_text.replace(' ','')
+        
+        dams = [int(d) for d in dams_text.split(',')]
+        sires = [int(d) for d in sires_text.split(',')]
     
-    all_pairs = get_all_pairings(dams, sires)
-    all_pairs
-    
+        all_pairs = get_all_pairings(dams, sires)
+        all_pairs
+        
