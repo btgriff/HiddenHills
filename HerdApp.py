@@ -153,12 +153,11 @@ def get_pairing(dam, sire, global_percentages):
     data = data.rename(columns=data.iloc[0])
     data = data.reindex(data.index.drop(0))
     data = data.reindex(data.index.drop(1)).reset_index(drop=True)
-    data = data.iloc[:,:-6]
+    epd = data.iloc[:,1:].reset_index(drop=True)
     
-    epd = data.iloc[0:1,1:].replace('',np.nan)
-    epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM']] = epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM']].astype(int)
-    epd[['BW','DMI','ADG']] = epd[['BW','DMI','ADG']].astype(float)
-    
+    epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY']] = epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY']].astype(int)
+    epd[['BW','DMI','ADG','Marb','YG','CW','REA','FAT']] = epd[['BW','DMI','ADG','Marb','YG','CW','REA','FAT']].astype(float)
+    epd.rename(columns={'Marb':'MARB','FAT':'BF'},inplace=True)
     
     pct_list = []
     for trait, value in zip(epd.columns,epd.values[0]):
@@ -168,13 +167,13 @@ def get_pairing(dam, sire, global_percentages):
     pct_df = pd.DataFrame(data=pct_list).T
     pct_df.columns=pct_cols_epd
     epd = pct_df.join(epd)
-
+    
     epd['Dam'] = dam
     epd['Sire'] = sire
     epd['Name'] = pair_name
     epd['AnimalID'] = pair_id
-
-
+    
+    
     epd = epd[['AnimalID'] + [col for col in epd.columns if col != 'AnimalID']]
     epd = epd[['Name'] + [col for col in epd.columns if col != 'Name']]
     
@@ -182,8 +181,8 @@ def get_pairing(dam, sire, global_percentages):
 
 def get_all_pairings(dams, sires):
     all_pairs = pd.DataFrame()
-    for sire in sires:
-        for dam in dams:
+    for dam in dams:
+        for sire in sires:
             pair = get_pairing(dam, sire, global_percentages)
             all_pairs = pd.concat([all_pairs,pair],ignore_index=True)
     return all_pairs
