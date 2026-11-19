@@ -76,6 +76,8 @@ def color_percentile(pc):
         return ""
     if pc <= 15:
         fg, bg = "#007f35", "#d9f0e3"
+    elif pc >= 85:
+        fg, bg = '#b60918', '#fddbde'
     else:
         return ""
     return f"color: {fg}; background-color: {bg}"
@@ -157,6 +159,7 @@ def get_pairing(dam, sire, global_percentages):
     
     epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY']] = epd[['HB','GM','ProS','CED','WW','YW','Milk','ME','HPG','CEM','STAY']].astype(int)
     epd[['BW','DMI','ADG','Marb','YG','CW','REA','FAT']] = epd[['BW','DMI','ADG','Marb','YG','CW','REA','FAT']].astype(float)
+    epd[['BW','DMI','ADG','Marb','YG','CW','REA','FAT']].style.format("{:.2f}")
     epd.rename(columns={'Marb':'MARB','FAT':'BF'},inplace=True)
     
     pct_list = []
