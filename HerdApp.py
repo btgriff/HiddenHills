@@ -176,6 +176,7 @@ def get_pairing(dam, sire, global_percentages):
     
     epd = epd[['AnimalID'] + [col for col in epd.columns if col != 'AnimalID']]
     epd = epd[['Name'] + [col for col in epd.columns if col != 'Name']]
+    epd['Date'] = pd.to_datetime('today').strftime('%Y-%m-%d')
     
     return epd
 
