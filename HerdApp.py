@@ -791,5 +791,12 @@ with herd_compare_tab:
 with pairing_tab:
     dams_text = st.text_input('Input a comma-separated list of Dams (RAAA#) (ex: 12345,12346,12347)')
     sires_text = st.text_input('Input a comma-separated list of Sires (RAAA#) (ex: 12345,12346,12347)')
-
+    dams_text.replace(' ','',inplce=True)
+    sires_text.replace(' ','',inplce=True)
+    
+    dams = [int(d) for d in dams_text]
+    sires = [int(d) for d in dams_text]
+    
+    all_pairs = get_all_pairings(dams, sires)
+    all_pairs
     
