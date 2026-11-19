@@ -795,7 +795,7 @@ with pairing_tab:
     sires_text.replace(' ','')
     
     dams = [int(d) for d in dams_text.split(',')]
-    sires = [int(d) for d in dams_text.split(',')]
+    sires = [int(d) for d in sires_text.split(',')]
 
     st.write(dams)
     st.write(sires)
