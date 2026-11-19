@@ -790,9 +790,9 @@ with herd_compare_tab:
 
 with pairing_tab:
     with st.form('Dams and Sires'):
-    dams_text = st.text_input('Input a comma-separated list of Dams (RAAA#) (ex: 12345,12346,12347)')
-    sires_text = st.text_input('Input a comma-separated list of Sires (RAAA#) (ex: 12345,12346,12347)')
-    pair_submitted = st.form_submit_button("Generate Planned Matings", width='stretch')
+        dams_text = st.text_input('Input a comma-separated list of Dams (RAAA#) (ex: 12345,12346,12347)')
+        sires_text = st.text_input('Input a comma-separated list of Sires (RAAA#) (ex: 12345,12346,12347)')
+        pair_submitted = st.form_submit_button("Generate Planned Matings", width='stretch')
 
     if pair_submitted:
         dams_text.replace(' ','')
